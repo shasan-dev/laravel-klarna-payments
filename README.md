@@ -1,5 +1,3 @@
-Here's a beautified version of the README for the Laravel Klarna Payments package:
-
 ---
 
 # Laravel Klarna Payments
