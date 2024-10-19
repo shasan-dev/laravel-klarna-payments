@@ -1,113 +1,101 @@
-# A laravel package to utilize Klarna Payments API
+Here's a beautified version of the README for the Laravel Klarna Payments package:
 
-**First install the package.**
+---
 
-Composer require shasan-dev/laravel-klarna-payments
+# Laravel Klarna Payments
 
-**After that publish the config file**
+This package integrates Klarna Payments into your Laravel application.
 
-php artisan vendor:publish --provider="LaravelKlarna\\KlarnaPayments\\KlarnaPaymentsServiceProvider" --tag="klarna-payments-config"
+## Installation
 
-**After that in your .env file add-**
+1. Install the package via Composer:
+   ```bash
+   composer require shasan-dev/laravel-klarna-payments
+   ```
 
-KLARNA_USER_ID= your user id
+2. Publish the configuration file:
+   ```bash
+   php artisan vendor:publish --provider="LaravelKlarna\KlarnaPayments\KlarnaPaymentsServiceProvider" --tag="klarna-payments-config"
+   ```
 
-KLARNA_PASSWORD= your password
+3. Update your `.env` file:
+   ```
+   KLARNA_USER_ID=your_user_id
+   KLARNA_PASSWORD=your_password
+   KLARNA_TESTMODE=true_or_false
+   KLARNA_REGION=NA/OC/EU (default EU)
+   ```
 
-KLARNA_TESTMODE= true or false
+## Usage
 
-KLARNA_REGION= NA or OC or EU ( default EU)
-
-**Make Controller**
-
+### Create a Controller
+```bash
 php artisan make:controller KlarnaController
+```
 
-**Then, create 2 routes**
+### Define Routes
+```php
+Route::get('payment/klarna-checkout', [KlarnaController::class, 'payment'])->name('klarna.checkout');
+Route::get('payment/klarna-success', [KlarnaController::class, 'paymentSuccess'])->name('klarna.success');
+```
 
-Route::get('payment/klarna-checkout', \[KlarnaController::class, 'payment'\])->name('klarna.checkout');
+### Payment Logic
+In `KlarnaController`, handle the payment logic as follows:
 
-Route::get('payment/klarna-success', \[KlarnaController::class, 'paymentSuccess'\])->name('klarna.success');
+```php
+use LaravelKlarna\KlarnaPayments\Facades\KlarnaPayments;
 
-**In controller**
+public function payment() {
+    $data = [
+        'order_amount' => 20 * 100,
+        'order_lines' => [
+            [
+                'name' => 'Running shoe',
+                'quantity' => 1,
+                'quantity_unit' => 'pcs',
+                'total_amount' => 20 * 100,
+                'type' => 'physical',
+                'unit_price' => 20 * 100,
+            ]
+        ],
+        'purchase_country' => 'US',
+        'purchase_currency' => 'USD',
+        'intent' => 'buy',
+    ];
 
-use LaravelKlarna\\KlarnaPayments\\Facades\\KlarnaPayments;
+    $sessionId = KlarnaPayments::createSession($data)->json()['session_id'];
 
-public function payment(){
+    $redirectUrl = KlarnaPayments::createHppSession($sessionId, [
+        'success' => route('klarna.success') . "?sid={{session_id}}&order_id={{order_id}}",
+        'cancel' => route('home'),
+        'back' => route('home'),
+        'failure' => route('home') . "?sid={{session_id}}",
+        'error' => route('home') . "?sid={{session_id}}",
+    ])->json()['redirect_url'];
 
-$data = \[
-
-&nbsp; 'order_amount' => 20 \* 100,
-
-&nbsp; 'order_lines' => \[
-
-&nbsp; \[
-
-&nbsp; 'name' => 'Running shoe',
-
-&nbsp; 'quantity' => 1,
-
-&nbsp; 'quantity_unit' => 'pcs',
-
-&nbsp; 'total_amount' => 20 \* 100,
-
-&nbsp; 'type' => 'physical',
-
-&nbsp; 'unit_price' => 20 \* 100,
-
-&nbsp; \]
-
-&nbsp; \],
-
-&nbsp; 'purchase_country' => 'US',
-
-&nbsp; 'purchase_currency' => 'USD',
-
-&nbsp; 'intent' => 'buy'
-
-&nbsp; \];
-
-&nbsp; $sessionId = KlarnaPayments::createSession($data)->json()\['session_id'\];
-
-&nbsp; $data = array(
-
-&nbsp; "success" => route('klarna.success') . "?sid={{session_id}}&order_id={{order_id}}",
-
-&nbsp; "cancel" => route('home'),
-
-&nbsp; "back" => route('home'),
-
-&nbsp; "failure" => route('home') . "?sid={{session_id}}",
-
-&nbsp; "error" => route('home') . "?sid={{session_id}}"
-
-&nbsp; );
-
-&nbsp; $redirectUrl = KlarnaPayments::createHppSession($sessionId, $data)->json()\['redirect_url'\];
-
-&nbsp; return redirect()->to($redirectUrl);
-
+    return redirect()->to($redirectUrl);
 }
 
-public function paymentSuccess(Request $request){
+public function paymentSuccess(Request $request) {
+    $checkPayment = KlarnaPayments::checkPayment($request->get('order_id'));
 
-$checkPayment = KlarnaPayments::checkPayment(Request::get('order_id'));
+    if ($checkPayment->json()['status'] === 'AUTHORIZED') {
+        return 'Payment Success. Reference No. ' . $checkPayment->json()['klarna_reference'];
+    }
 
-&nbsp; if ($checkPayment->json()\['status'\] == 'AUTHORIZED') {
-
-&nbsp; echo 'Payment Success. Reference No. ' . $checkPayment->json()\['klarna_reference'\];
-
-&nbsp; return;
-
-&nbsp; } else {
-
-&nbsp; echo 'Payment Not Success';
-
-&nbsp; return;
-
-&nbsp; }
-
+    return 'Payment Not Successful';
 }
+```
 
-**Now go to “**payment/klarna-checkout**” url .**
+### Final Steps
 
-If you like the package don’t forget to star. Thanks.
+Visit `/payment/klarna-checkout` to initiate a payment. 
+
+If you find this package helpful, don't forget to star it! Thanks.
+
+## License
+
+MIT License.
+
+---
+
